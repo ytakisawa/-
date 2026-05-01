@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>集合駅を探す</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.1);
+    --border-strong: rgba(0,0,0,0.2);
+    --text: #1a1a18;
+    --text-sub: #6b6b67;
+    --text-hint: #a0a09c;
+    --blue: #185FA5;
+    --blue-light: #E6F1FB;
+    --blue-dark: #0C447C;
+    --green: #1D9E75;
+    --green-light: #E1F5EE;
+    --green-dark: #085041;
+    --amber-light: #FAEEDA;
+    --amber-dark: #633806;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-pill: 999px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  header {
+    padding: 2rem 1.5rem 1.25rem;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+
+  header p {
+    font-size: 13px;
+    color: var(--text-sub);
+  }
+
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    color: var(--text-hint);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* Members */
+  .member-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .member-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+
+
+  .remove-btn {
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--text-hint);
+    font-size: 18px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s, color .15s;
+  }
+  .remove-btn:hover { background: var(--bg); color: var(--text); }
+
+  .add-btn {
+    font-size: 13px;
+    color: var(--text-sub);
+    background: none;
+    border: 0.5px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 7px 14px;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 4px;
+    transition: background .15s;
+  }
+  .add-btn:hover { background: var(--bg); }
+
+  /* Search btn */
+  .search-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: inherit;
+    background: var(--text);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    margin-top: 1rem;
+    letter-spacing: .01em;
+    transition: opacity .15s, transform .1s;
+  }
+  .search-btn:hover { opacity: .88; }
+  .search-btn:active { transform: scale(.985); }
+  .search-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+  /* Error */
+  .error-msg {
+    display: none;
+    font-size: 13px;
+    color: #A32D2D;
+    background: #FCEBEB;
+    border-radius: var(--radius-sm);
+    padding: 9px 14px;
+    margin-top: 10px;
+  }
+  .error-msg.show { display: block; }
+
+  /* Hint */
+  .hint-msg {
+    display: none;
+    font-size: 12px;
+    color: var(--text-sub);
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 9px 14px;
+    margin-top: 10px;
+    line-height: 1.6;
+  }
+  .hint-msg.show { display: block; }
+
+  /* Results */
+  #results { display: none; }
+  #results.show { display: block; }
+
+  .results-header {
+    font-size: 12px;
+    color: var(--text-hint);
+    margin-bottom: 12px;
+    font-weight: 500;
+    letter-spacing: .04em;
+  }
+
+  /* Scale tabs */
+  .scale-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .scale-tab {
+    padding: 6px 18px;
+    font-size: 13px;
+    font-family: inherit;
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius-pill);
+    background: var(--surface);
+    color: var(--text-sub);
+    cursor: pointer;
+    transition: all .15s;
+    font-weight: 500;
+  }
+  .scale-tab:hover { background: var(--bg); }
+  .scale-tab.active {
+    background: var(--text);
+    color: #fff;
+    border-color: var(--text);
+  }
+
+  .scale-desc {
+    font-size: 12px;
+    color: var(--text-hint);
+    margin-bottom: 12px;
+    min-height: 16px;
+  }
+
+  /* Rank tabs */
+  .rank-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    padding: 6px 16px;
+    font-size: 13px;
+    font-family: inherit;
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius-pill);
+    background: var(--surface);
+    color: var(--text-sub);
+    cursor: pointer;
+    transition: all .15s;
+    font-weight: 500;
+  }
+  .tab-btn:hover { background: var(--bg); }
+  .tab-btn.active {
+    background: var(--text);
+    color: #fff;
+    border-color: var(--text);
+  }
+
+  /* Station card */
+  .station-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    display: none;
+    animation: fadeIn .2s ease;
+  }
+  .station-card.active { display: block; }
+  .station-card.best { border: 2px solid var(--blue); }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: .75rem;
+    gap: 12px;
+  }
+
+  .station-name {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .station-badge {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .reason {
+    font-size: 13px;
+    color: var(--text-sub);
+    margin-bottom: 1rem;
+    line-height: 1.7;
+  }
+
+  /* Time bars */
+  .times-section { margin-bottom: 1rem; }
+
+  .time-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: var(--text-hint);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .time-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .time-from {
+    font-size: 13px;
+    color: var(--text-sub);
+    width: 96px;
+    flex-shrink: 0;
+  }
+
+  .bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: var(--bg);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width .6s cubic-bezier(.4,0,.2,1);
+  }
+
+  .time-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    width: 64px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* Route */
+  .route-section {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 1rem;
+  }
+
+  .route-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-sub);
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .route-row:last-child { margin-bottom: 0; }
+
+  .route-from {
+    font-weight: 700;
+    color: var(--text);
+    min-width: 80px;
+  }
+
+  .route-dest {
+    font-weight: 700;
+    color: var(--blue);
+  }
+
+  .arrow-icon {
+    color: var(--text-hint);
+    font-size: 10px;
+  }
+
+  /* Action button */
+  .action-btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 500;
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .action-btn:hover { background: var(--bg); }
+
+  /* Loading */
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-sub);
+    font-size: 14px;
+  }
+  .loading.show { display: block; }
+
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--text);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    margin: 0 auto 12px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    font-size: 12px;
+    color: var(--text-hint);
+  }
+
+  /* Autocomplete */
+  .ac-wrap {
+    flex: 1;
+    position: relative;
+  }
+
+  .ac-wrap input {
+    width: 100%;
+    height: 38px;
+    padding: 0 12px;
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s;
+  }
+
+  .ac-wrap input:focus { border-color: var(--blue); background: #fff; }
+  .ac-wrap input::placeholder { color: var(--text-hint); }
+
+  .ac-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+    z-index: 100;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .ac-dropdown.open { display: block; }
+
+  .ac-item {
+    padding: 9px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--text);
+    transition: background .1s;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .ac-item:last-child { border-bottom: none; }
+  .ac-item:hover, .ac-item.selected { background: var(--blue-light); color: var(--blue-dark); }
+
+  .ac-item mark {
+    background: none;
+    color: var(--blue);
+    font-weight: 700;
+  }
+
+  /* Priority slider */
+  .priority-section {
+    margin-top: 1rem;
+    margin-bottom: .25rem;
+  }
+
+  .priority-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .priority-desc {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+  }
+
+  .priority-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .priority-edge {
+    font-size: 11px;
+    color: var(--text-hint);
+    white-space: nowrap;
+  }
+
+  #prioritySlider {
+    flex: 1;
+    accent-color: var(--blue);
+    cursor: pointer;
+  }
+
+  @media (max-width: 480px) {
+    header { padding: 1.5rem 1rem 1rem; }
+    main { padding: 0 1rem 3rem; }
+    .station-name { font-size: 18px; }
+    .time-from { width: 76px; }
+    .time-val { width: 56px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>集合駅を探す</h1>
+  <p>出発駅を入力して、みんなにとって公平な集合駅を見つけましょう。</p>
+</header>
+
+<main>
+  <div class="card">
+    <div class="section-label">出発駅</div>
+    <div id="membersSection"></div>
+    <button class="add-btn" id="addBtn">＋ 人を追加する</button>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="hint-msg" id="hintMsg"></div>
+    <div class="priority-section">
+      <div class="priority-label-row">
+        <span class="section-label" style="margin-bottom:0">優先度</span>
+        <span class="priority-desc" id="priorityDesc">バランス重視</span>
+      </div>
+      <div class="priority-slider-row">
+        <span class="priority-edge">ばらつきなし重視</span>
+        <input type="range" id="prioritySlider" min="0" max="2" step="1" value="1">
+        <span class="priority-edge">所要時間重視</span>
+      </div>
+    </div>
+    <button class="search-btn" id="searchBtn">中間地点を探す</button>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    計算中...
+  </div>
+
+  <div id="results">
+    <div class="results-header" id="resultsHeader"></div>
+    <div class="scale-tabs" id="scaleTabs">
+      <button class="scale-tab active" data-scale="all" onclick="switchScale('all')">すべて</button>
+      <button class="scale-tab" data-scale="large" onclick="switchScale('large')">大規模駅</button>
+      <button class="scale-tab" data-scale="medium" onclick="switchScale('medium')">中規模駅</button>
+    </div>
+    <div id="scaleDesc" class="scale-desc"></div>
+    <div id="stationCards"></div>
+  </div>
+</main>
+
+<footer>集合駅を探す — powered by station data</footer>
+
+<script>
+const COLORS = [
+  { bg:'#E6F1FB', color:'#0C447C' },
+  { bg:'#E1F5EE', color:'#085041' },
+  { bg:'#FAEEDA', color:'#633806' },
+  { bg:'#FBEAF0', color:'#72243E' },
+  { bg:'#EEEDFE', color:'#3C3489' },
+];
+
+const BADGE_STYLES = [
+  { bg:'#E6F1FB', color:'#0C447C' },
+  { bg:'#E1F5EE', color:'#085041' },
+  { bg:'#FAEEDA', color:'#633806' },
+  { bg:'#F1EFE8', color:'#444441' },
+  { bg:'#F1EFE8', color:'#444441' },
+  { bg:'#F1EFE8', color:'#444441' },
+  { bg:'#F1EFE8', color:'#444441' },
+  { bg:'#F1EFE8', color:'#444441' },
+  { bg:'#F1EFE8', color:'#444441' },
+  { bg:'#F1EFE8', color:'#444441' },
+];
+
+const BAR_COLORS = ['#185FA5','#1D9E75','#854F0B','#534AB7','#993C1D'];
+
+const STATION_DB = {
+  '東京':{ lat:35.6812, lng:139.7671, scale:'large' },'新宿':{ lat:35.6896, lng:139.7006, scale:'large' },
+  '渋谷':{ lat:35.6580, lng:139.7016, scale:'large' },'池袋':{ lat:35.7295, lng:139.7109, scale:'large' },
+  '上野':{ lat:35.7141, lng:139.7774, scale:'large' },'秋葉原':{ lat:35.6984, lng:139.7731, scale:'large' },
+  '品川':{ lat:35.6284, lng:139.7387, scale:'large' },'新橋':{ lat:35.6665, lng:139.7581, scale:'large' },
+  '有楽町':{ lat:35.6750, lng:139.7633, scale:'medium' },'浜松町':{ lat:35.6551, lng:139.7574, scale:'medium' },
+  '田町':{ lat:35.6458, lng:139.7475, scale:'medium' },'大崎':{ lat:35.6197, lng:139.7284, scale:'medium' },
+  '五反田':{ lat:35.6261, lng:139.7234, scale:'medium' },'目黒':{ lat:35.6334, lng:139.7156, scale:'medium' },
+  '恵比寿':{ lat:35.6467, lng:139.7100, scale:'medium' },'原宿':{ lat:35.6702, lng:139.7027, scale:'medium' },
+  '代々木':{ lat:35.6833, lng:139.7022, scale:'small' },'高田馬場':{ lat:35.7122, lng:139.7037, scale:'medium' },
+  '大塚':{ lat:35.7296, lng:139.7284, scale:'small' },'巣鴨':{ lat:35.7332, lng:139.7394, scale:'small' },
+  '駒込':{ lat:35.7368, lng:139.7484, scale:'small' },'田端':{ lat:35.7379, lng:139.7601, scale:'small' },
+  '西日暮里':{ lat:35.7324, lng:139.7668, scale:'small' },'日暮里':{ lat:35.7278, lng:139.7710, scale:'medium' },
+  '鶯谷':{ lat:35.7211, lng:139.7781, scale:'small' },'御徒町':{ lat:35.7078, lng:139.7742, scale:'medium' },
+  '神田':{ lat:35.6916, lng:139.7709, scale:'medium' },'浅草':{ lat:35.7115, lng:139.7963, scale:'medium' },
+  '錦糸町':{ lat:35.6963, lng:139.8174, scale:'medium' },'両国':{ lat:35.6966, lng:139.7935, scale:'small' },
+  '押上':{ lat:35.7101, lng:139.8136, scale:'small' },'北千住':{ lat:35.7494, lng:139.8006, scale:'large' },
+  '南千住':{ lat:35.7364, lng:139.8024, scale:'small' },'亀有':{ lat:35.7613, lng:139.8479, scale:'small' },
+  '金町':{ lat:35.7665, lng:139.8693, scale:'small' },'綾瀬':{ lat:35.7468, lng:139.8280, scale:'small' },
+  '赤羽':{ lat:35.7782, lng:139.7213, scale:'large' },'王子':{ lat:35.7514, lng:139.7368, scale:'medium' },
+  '大宮':{ lat:35.9062, lng:139.6236, scale:'large' },'浦和':{ lat:35.8584, lng:139.6435, scale:'medium' },
+  '川口':{ lat:35.8069, lng:139.7261, scale:'medium' },'吉祥寺':{ lat:35.7027, lng:139.5795, scale:'large' },
+  '三鷹':{ lat:35.6978, lng:139.5604, scale:'medium' },'国分寺':{ lat:35.7007, lng:139.4796, scale:'medium' },
+  '立川':{ lat:35.6988, lng:139.4130, scale:'large' },'八王子':{ lat:35.6556, lng:139.3388, scale:'large' },
+  '川崎':{ lat:35.5308, lng:139.7027, scale:'large' },'横浜':{ lat:35.4658, lng:139.6225, scale:'large' },
+  '桜木町':{ lat:35.4527, lng:139.6316, scale:'medium' },'関内':{ lat:35.4434, lng:139.6410, scale:'medium' },
+  '戸塚':{ lat:35.3985, lng:139.5318, scale:'medium' },'大船':{ lat:35.3451, lng:139.5331, scale:'medium' },
+  '西船橋':{ lat:35.6997, lng:139.9417, scale:'medium' },'船橋':{ lat:35.6980, lng:139.9824, scale:'large' },
+  '千葉':{ lat:35.6130, lng:140.1114, scale:'large' },'柏':{ lat:35.8677, lng:139.9755, scale:'medium' },
+  '松戸':{ lat:35.7879, lng:139.9030, scale:'medium' },'新松戸':{ lat:35.8059, lng:139.9126, scale:'small' },
+  '我孫子':{ lat:35.8671, lng:140.0168, scale:'small' },'中野':{ lat:35.7074, lng:139.6654, scale:'medium' },
+  '高円寺':{ lat:35.7051, lng:139.6493, scale:'small' },'阿佐ヶ谷':{ lat:35.7059, lng:139.6362, scale:'small' },
+  '荻窪':{ lat:35.7053, lng:139.6197, scale:'medium' },'下北沢':{ lat:35.6611, lng:139.6680, scale:'medium' },
+  '溝の口':{ lat:35.6022, lng:139.6104, scale:'medium' },'二子玉川':{ lat:35.6125, lng:139.6282, scale:'medium' },
+  '自由が丘':{ lat:35.6079, lng:139.6682, scale:'medium' },'中目黒':{ lat:35.6444, lng:139.6987, scale:'medium' },
+  '蒲田':{ lat:35.5626, lng:139.7164, scale:'medium' },'大森':{ lat:35.5797, lng:139.7313, scale:'small' },
+  '大井町':{ lat:35.6000, lng:139.7307, scale:'medium' },'小岩':{ lat:35.7353, lng:139.8788, scale:'small' },
+  '新小岩':{ lat:35.7198, lng:139.8667, scale:'small' },'つつじヶ丘':{ lat:35.6647, lng:139.5704, scale:'small' },
+  '調布':{ lat:35.6508, lng:139.5446, scale:'medium' },'府中':{ lat:35.6685, lng:139.4777, scale:'medium' },
+  '分倍河原':{ lat:35.6568, lng:139.4396, scale:'small' },'聖蹟桜ヶ丘':{ lat:35.6368, lng:139.4234, scale:'small' },
+  '多摩センター':{ lat:35.6247, lng:139.4316, scale:'medium' },'橋本':{ lat:35.5884, lng:139.3536, scale:'medium' },
+  '鎌取':{ lat:35.5542, lng:140.1780, scale:'small' },'蘇我':{ lat:35.5676, lng:140.1337, scale:'medium' },
+  '千葉みなと':{ lat:35.5915, lng:140.1055, scale:'small' },'新習志野':{ lat:35.6612, lng:140.0271, scale:'small' },
+  '海浜幕張':{ lat:35.6473, lng:140.0471, scale:'medium' },'幕張本郷':{ lat:35.6584, lng:140.0318, scale:'small' },
+  '津田沼':{ lat:35.6802, lng:139.9933, scale:'medium' },'新浦安':{ lat:35.6541, lng:139.9045, scale:'small' },
+  '舞浜':{ lat:35.6329, lng:139.8850, scale:'small' },'葛西':{ lat:35.6699, lng:139.8711, scale:'small' },
+  '代々木上原':{ lat:35.6676, lng:139.6842, scale:'medium' },'登戸':{ lat:35.6089, lng:139.5745, scale:'small' },
+  '向ヶ丘遊園':{ lat:35.5998, lng:139.5574, scale:'small' },'新百合ヶ丘':{ lat:35.5987, lng:139.5000, scale:'medium' },
+  '町田':{ lat:35.5419, lng:139.4454, scale:'large' },'相模大野':{ lat:35.5290, lng:139.4317, scale:'medium' },
+};
+
+let members = [{ id:1, name:'' }, { id:2, name:'' }];
+let nextId = 3;
+
+const ALL_STATIONS = Object.keys(STATION_DB).sort();
+
+function highlight(text, query) {
+  if (!query) return text;
+  const idx = text.indexOf(query);
+  if (idx < 0) return text;
+  return text.slice(0, idx) + '<mark>' + text.slice(idx, idx + query.length) + '</mark>' + text.slice(idx + query.length);
+}
+
+function makeAutocomplete(inp, av, m, i) {
+  const wrap = inp.parentElement;
+  const drop = wrap.querySelector('.ac-dropdown');
+  let selIdx = -1;
+  let matches = [];
+
+  function updateAvatar() {
+    av.textContent = m.name ? m.name.slice(0,2) : String.fromCharCode(65+i);
+  }
+
+  function openDrop(q) {
+    matches = ALL_STATIONS.filter(s => s.includes(q)).slice(0, 8);
+    if (!matches.length || !q) { drop.className = 'ac-dropdown'; return; }
+    selIdx = -1;
+    drop.innerHTML = matches.map((s, j) =>
+      `<div class="ac-item" data-idx="${j}">${highlight(s, q)}</div>`
+    ).join('');
+    drop.className = 'ac-dropdown open';
+    drop.querySelectorAll('.ac-item').forEach(el => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();
+        selectItem(parseInt(el.dataset.idx));
+      });
+    });
+  }
+
+  function selectItem(idx) {
+    m.name = matches[idx];
+    inp.value = m.name;
+    updateAvatar();
+    drop.className = 'ac-dropdown';
+    selIdx = -1;
+  }
+
+  function closeDrop() { drop.className = 'ac-dropdown'; selIdx = -1; }
+
+  inp.addEventListener('input', e => {
+    m.name = e.target.value;
+    updateAvatar();
+    openDrop(e.target.value.trim());
+  });
+
+  inp.addEventListener('keydown', e => {
+    if (!drop.classList.contains('open')) return;
+    const items = drop.querySelectorAll('.ac-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selIdx = Math.min(selIdx + 1, matches.length - 1);
+      items.forEach((el, j) => el.className = 'ac-item' + (j===selIdx?' selected':''));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selIdx = Math.max(selIdx - 1, 0);
+      items.forEach((el, j) => el.className = 'ac-item' + (j===selIdx?' selected':''));
+    } else if (e.key === 'Enter' && selIdx >= 0) {
+      e.preventDefault();
+      selectItem(selIdx);
+    } else if (e.key === 'Escape') {
+      closeDrop();
+    }
+  });
+
+  inp.addEventListener('blur', () => setTimeout(closeDrop, 150));
+  inp.addEventListener('focus', () => { if (inp.value.trim()) openDrop(inp.value.trim()); });
+}
+
+function renderMembers() {
+  const sec = document.getElementById('membersSection');
+  sec.innerHTML = '';
+  members.forEach((m, i) => {
+    const c = COLORS[i % COLORS.length];
+    const row = document.createElement('div');
+    row.className = 'member-row';
+
+    const av = document.createElement('div');
+    av.className = 'member-avatar';
+    av.style.cssText = `background:${c.bg};color:${c.color}`;
+    av.textContent = m.name ? m.name.slice(0,2) : String.fromCharCode(65+i);
+
+    const acWrap = document.createElement('div');
+    acWrap.className = 'ac-wrap';
+
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.placeholder = '出発駅を入力（例：新宿、池袋）';
+    inp.value = m.name;
+    inp.autocomplete = 'off';
+
+    const drop = document.createElement('div');
+    drop.className = 'ac-dropdown';
+
+    acWrap.appendChild(inp);
+    acWrap.appendChild(drop);
+
+    makeAutocomplete(inp, av, m, i);
+
+    row.appendChild(av);
+    row.appendChild(acWrap);
+
+    if (members.length > 2) {
+      const rb = document.createElement('button');
+      rb.className = 'remove-btn';
+      rb.innerHTML = '&times;';
+      rb.title = '削除';
+      rb.addEventListener('click', () => { members = members.filter(x => x.id !== m.id); const slider = document.getElementById('prioritySlider');
+const priorityLabels = ['ばらつきなし重視', 'バランス重視', '所要時間重視'];
+function updatePriorityLabel() {
+  document.getElementById('priorityDesc').textContent = priorityLabels[parseInt(slider.value)];
+}
+slider.addEventListener('input', updatePriorityLabel);
+updatePriorityLabel();
+
+renderMembers(); });
+      row.appendChild(rb);
+    } else {
+      const sp = document.createElement('div');
+      sp.style.width = '30px';
+      row.appendChild(sp);
+    }
+    sec.appendChild(row);
+  });
+}
+
+document.getElementById('addBtn').addEventListener('click', () => {
+  if (members.length >= 5) return;
+  members.push({ id: nextId++, name: '' });
+  renderMembers();
+});
+
+document.getElementById('searchBtn').addEventListener('click', doSearch);
+
+function dist(a, b) {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const s = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+}
+
+function estMin(from, to) {
+  if (from === to) return 0;
+  const a = STATION_DB[from], b = STATION_DB[to];
+  if (!a || !b) return 40;
+  return Math.round(dist(a, b) * 2.8 + 5);
+}
+
+async function doSearch() {
+  const errEl = document.getElementById('errorMsg');
+  const hintEl = document.getElementById('hintMsg');
+  errEl.className = 'error-msg';
+  hintEl.className = 'hint-msg';
+
+  const names = members.map(m => m.name.trim()).filter(Boolean);
+  if (names.length < 2) {
+    errEl.textContent = '2人以上の出発駅を入力してください。';
+    errEl.className = 'error-msg show';
+    return;
+  }
+
+  // STATION_DBにない駅名も含めてAIに渡す（AIは路線知識で補完）
+  const allNames = [...new Set(names)];
+  const missing = names.filter(n => !STATION_DB[n]);
+  const found = names.filter(n => STATION_DB[n]);
+
+  // STATION_DBにある駅が1つもない場合は全駅をAIのみで処理
+  const useDbForFilter = found.length >= 1;
+
+  if (missing.length > 0 && found.length < 1) {
+    errEl.textContent = `「${missing.join('・')}」が見つかりませんでした。駅名を漢字で正確に入力してください。`;
+    errEl.className = 'error-msg show';
+    return;
+  }
+
+  if (missing.length > 0) {
+    hintEl.textContent = `「${missing.join('・')}」はデータベースにありませんが、AIが所要時間を計算します。`;
+    hintEl.className = 'hint-msg show';
+  }
+
+  const loadingEl = document.getElementById('loading');
+  loadingEl.innerHTML = '<div class="spinner"></div>AIが電車の所要時間を計算中...（20〜30秒かかります）';
+  loadingEl.className = 'loading show';
+  document.getElementById('results').className = '';
+  document.getElementById('searchBtn').disabled = true;
+
+  try {
+    // Step1: 直線距離で候補を絞る（DBにある駅を使って中間点算出）
+    const midLat = found.length ? found.reduce((s,n) => s + STATION_DB[n].lat, 0) / found.length : 35.68;
+    const midLng = found.length ? found.reduce((s,n) => s + STATION_DB[n].lng, 0) / found.length : 139.70;
+    const mid = { lat: midLat, lng: midLng };
+
+    const candidateNames = Object.keys(STATION_DB)
+      .filter(n => !allNames.includes(n))
+      .map(n => ({ name: n, d: dist(mid, STATION_DB[n]) }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 25)
+      .map(x => x.name);
+
+    // 出発駅自身も候補に含める
+    allNames.forEach(n => { if (!candidateNames.includes(n)) candidateNames.unshift(n); });
+
+    // Step2: AIに一括で所要時間を問い合わせ
+    const timeMatrix = await fetchTravelTimes(allNames, candidateNames);
+
+    // Step3: AI結果でスコアリング・表示
+    _found = allNames;
+    _timeMatrix = timeMatrix;
+    showResults([], allNames);
+
+  } catch(e) {
+    console.error(e);
+    errEl.textContent = 'AI呼び出しに失敗しました。しばらくしてから再試行してください。';
+    errEl.className = 'error-msg show';
+  } finally {
+    loadingEl.className = 'loading';
+    loadingEl.innerHTML = '<div class="spinner"></div>計算中...';
+    document.getElementById('searchBtn').disabled = false;
+  }
+}
+
+let _timeMatrix = {}; // { "新宿→錦糸町": 25, ... }
+
+async function fetchTravelTimes(fromStations, toStations) {
+  const pairs = [];
+  fromStations.forEach(f => {
+    toStations.forEach(t => {
+      if (f !== t) pairs.push(`${f}→${t}`);
+    });
+  });
+
+  const prompt = `以下の駅間の電車での所要時間（分）を答えてください。
+実際の路線・乗換を考慮した現実的な所要時間をお願いします。
+同じ駅は0分です。
+
+${pairs.join('\n')}
+
+以下のJSON形式のみで返してください。説明・コードブロック不要：
+{"${pairs[0]}":分数, "${pairs[1]}":分数, ...}`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  const data = await res.json();
+  const text = data.content.map(b => b.text || '').join('');
+  const clean = text.replace(/```json|```/g, '').trim();
+  const parsed = JSON.parse(clean);
+
+  // 同駅は0
+  fromStations.forEach(f => { parsed[`${f}→${f}`] = 0; });
+  toStations.forEach(t => { parsed[`${t}→${t}`] = 0; });
+
+  return parsed;
+}
+
+function getAITime(from, to, matrix) {
+  if (from === to) return 0;
+  const key = `${from}→${to}`;
+  if (matrix[key] !== undefined) return matrix[key];
+  // フォールバック: 直線推定
+  return estMin(from, to);
+}
+
+let _allCandidates = [];
+let _found = [];
+
+// priority: 0=ばらつきなし重視, 1=バランス, 2=所要時間重視
+// ロジック: score = total * wTotal + spread * wSpread
+// wTotal/wSpreadの比率で優先度を制御
+// ただし「ばらつきがあっても所要時間が大幅に短ければ推奨」を実現するため
+// spreadにはソフトな閾値ペナルティを使う
+const PRIORITY_CONFIGS = [
+  { label: 'ばらつきなし重視', wTotal: 1,  wSpread: 20 },
+  { label: 'バランス重視',     wTotal: 5,  wSpread: 8  },
+  { label: '所要時間重視',     wTotal: 15, wSpread: 1  },
+];
+
+function getPriorityConfig() {
+  const v = parseInt(document.getElementById('prioritySlider').value);
+  return PRIORITY_CONFIGS[v];
+}
+
+function scoreCandidate(name, found, mid, cfg, matrix) {
+  const st = STATION_DB[name] || { scale: 'medium' };
+  const times = found.map(f => ({ from: f, minutes: matrix ? getAITime(f, name, matrix) : estMin(f, name) }));
+  const total = times.reduce((s,t) => s + t.minutes, 0);
+  const avg = total / times.length;
+  const maxT = Math.max(...times.map(t => t.minutes));
+  const minT = Math.min(...times.map(t => t.minutes));
+  const spread = maxT - minT;
+  const score = total * cfg.wTotal + spread * cfg.wSpread;
+  return { name, times, avg: Math.round(avg), maxT, spread, score, scale: st.scale };
+}
+
+function showResults(candidates, found) {
+  _allCandidates = candidates;
+  _found = found;
+  document.getElementById('resultsHeader').textContent = found.join(' / ') + ' の集合駅候補';
+  document.getElementById('results').className = 'show';
+  switchScale('all');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function switchScale(scale) {
+  document.querySelectorAll('.scale-tab').forEach(b => {
+    b.className = 'scale-tab' + (b.dataset.scale === scale ? ' active' : '');
+  });
+
+  const desc = { all: 'すべての規模の駅から最適な駅を提案', large: '大型ターミナル駅から提案', medium: '中規模駅から提案' };
+  document.getElementById('scaleDesc').textContent = desc[scale];
+
+  const midLat = _found.reduce((s,n) => s + STATION_DB[n].lat, 0) / _found.length;
+  const midLng = _found.reduce((s,n) => s + STATION_DB[n].lng, 0) / _found.length;
+  const mid = { lat: midLat, lng: midLng };
+  const cfg = getPriorityConfig();
+
+  // _timeMatrixがあればAI時刻を使う
+  // 候補はtimeMatrixのキーから抽出（to駅）
+  let candidateNames;
+  if (_timeMatrix && Object.keys(_timeMatrix).length > 0) {
+    const toSet = new Set();
+    Object.keys(_timeMatrix).forEach(k => { const parts = k.split('→'); if (parts[1]) toSet.add(parts[1]); });
+    _found.forEach(f => toSet.add(f));
+    candidateNames = [...toSet];
+  } else {
+    candidateNames = Object.keys(STATION_DB);
+  }
+
+  const filtered = candidateNames
+    .filter(n => {
+      if (scale === 'all') return true;
+      const s = (STATION_DB[n] || {}).scale;
+      return s === scale;
+    })
+    .map(n => scoreCandidate(n, _found, mid, cfg, _timeMatrix && Object.keys(_timeMatrix).length ? _timeMatrix : null))
+    .sort((a, b) => a.score - b.score);
+
+  const bestMaxT = filtered.length ? filtered[0].maxT : 60;
+  const threshold = Math.max(bestMaxT * 1.6, 60);
+  const top = filtered.filter(c => c.maxT <= threshold).slice(0, 10);
+
+  if (!top.length) {
+    document.getElementById('stationCards').innerHTML =
+      `<p style="font-size:13px;color:var(--text-hint);padding:1rem 0;">この規模の候補が見つかりませんでした。</p>`;
+    return;
+  }
+
+  renderCards(top);
+}
+
+function renderCards(candidates) {
+  const cardsEl = document.getElementById('stationCards');
+  cardsEl.innerHTML = '';
+  const maxTime = Math.max(...candidates.flatMap(c => c.times.map(t => t.minutes || 1)));
+  const labels = ['おすすめ','2位','3位','4位','5位','6位','7位','8位','9位','10位'];
+
+  const tabsWrap = document.createElement('div');
+  tabsWrap.className = 'rank-tabs';
+  tabsWrap.id = 'rankTabs';
+  cardsEl.appendChild(tabsWrap);
+
+  candidates.forEach((c, i) => {
+    const bsIdx = Math.min(i, BADGE_STYLES.length - 1);
+    const bs = BADGE_STYLES[bsIdx];
+    const tab = document.createElement('button');
+    tab.className = 'tab-btn' + (i === 0 ? ' active' : '');
+    tab.textContent = `${labels[i]} ${c.name}`;
+    tab.addEventListener('click', () => switchCard(i, candidates.length));
+    tabsWrap.appendChild(tab);
+
+    const card = document.createElement('div');
+    card.className = 'station-card' + (i === 0 ? ' active best' : '');
+    card.id = 'scard' + i;
+
+    const spread = c.maxT - Math.min(...c.times.map(t => t.minutes));
+    const balance = spread <= 5 ? '均等' : spread <= 15 ? 'やや差あり' : '差が大きい';
+    const scaleLabel = { large: '大規模駅', medium: '中規模駅', small: '小規模駅' }[c.scale] || '';
+
+    card.innerHTML = `
+      <div class="card-top">
+        <div>
+          <div class="station-name">${c.name}駅</div>
+          <div style="font-size:11px;color:var(--text-hint);margin-top:2px">${scaleLabel}</div>
+        </div>
+        <span class="station-badge" style="background:${bs.bg};color:${bs.color}">${labels[i]}</span>
+      </div>
+      <div class="reason">平均所要時間 <strong>${c.avg}分</strong>・ばらつき ${balance}（最大差 ${Math.round(spread)}分）</div>
+      <div class="times-section">
+        <div class="time-section-label">各出発駅からの所要時間${ (_timeMatrix && Object.keys(_timeMatrix).length) ? '（AI計算）' : '（推定）'}</div>
+        ${c.times.map((t, ti) => `
+          <div class="time-row">
+            <div class="time-from">${t.from}</div>
+            <div class="bar-wrap"><div class="bar-fill" style="width:${Math.round((t.minutes || 0) / maxTime * 100)}%;background:${BAR_COLORS[ti % BAR_COLORS.length]}"></div></div>
+            <div class="time-val">${t.minutes === 0 ? '0分（出発地）' : '約' + t.minutes + '分'}</div>
+          </div>`).join('')}
+      </div>
+    `;
+    cardsEl.appendChild(card);
+  });
+}
+
+function switchCard(idx, total) {
+  for (let i = 0; i < total; i++) {
+    const card = document.getElementById('scard' + i);
+    if (!card) continue;
+    card.className = 'station-card' + (i === 0 ? ' best' : '') + (i === idx ? ' active' : '');
+  }
+  document.querySelectorAll('#rankTabs .tab-btn').forEach((b, i) => {
+    b.className = 'tab-btn' + (i === idx ? ' active' : '');
+  });
+}
+
+renderMembers();
+</script>
+</body>
+</html>
